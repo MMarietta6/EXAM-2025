@@ -120,7 +120,7 @@ int main() {
     return 0;
 }
 
-n this C program, the separation of code into consonant_processing.h (header file), consonant_processing.c (source file with function definitions),
+In this C program, the separation of code into consonant_processing.h (header file), consonant_processing.c (source file with function definitions),
 and main.c (source file with the main program logic) facilitates modularity and organization. The header file acts as an interface, declaring
 function prototypes and shared data structures like ConsonantData, which are then implemented in consonant_processing.c. Both main.c and
 consonant_processing.c use the #include "consonant_processing.h" directive to access these declarations, enabling the main function to call 
