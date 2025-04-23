@@ -1,0 +1,173 @@
+// Library
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+
+// Definitions
+#define INITIAL_CAPACITY 10 
+#define INPUT_FILENAME "f9.txt"
+#define OUTPUT_FILENAME "TU.txt"
+
+typedef struct {
+    char *consonants; 
+    int count;
+    int capacity;
+} ConsonantData;
+
+// Prototypes
+int is_vowel(char c);
+int compare_chars_insensitive(const void *a, const void *b);
+void initializeData(ConsonantData *data);
+void readData(ConsonantData *data);
+
+
+void processData(ConsonantData *data);
+void writeData(const ConsonantData *data);
+void freeData(ConsonantData *data);
+
+// Main
+int main() {
+    // Variable Declarations
+    ConsonantData data;
+
+    
+    initializeData(&data);
+
+    // Calls to Functions
+    readData(&data);
+    processData(&data);
+    writeData(&data);
+
+    
+    freeData(&data);
+
+    return 0;
+}
+
+// Function Definitions
+
+// Helper function to check if a character is a vowel
+int is_vowel(char c) {
+    c = tolower(c);
+    return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
+}
+
+// Helper comparison function for case-insensitive qsort
+int compare_chars_insensitive(const void *a, const void *b) {
+    return (tolower(*(char *)a) - tolower(*(char *)b));
+}
+
+// Function to initialize the ConsonantData structure
+void initializeData(ConsonantData *data) {
+    data->consonants = NULL;
+    data->count = 0;
+    data->capacity = 0;
+}
+
+// Function to read data from the input file with dynamic allocation and error handling
+void readData(ConsonantData *data) {
+    FILE *infile = fopen(INPUT_FILENAME, "r");
+    if (infile == NULL) {
+        fprintf(stderr, "Error opening %s: ", INPUT_FILENAME);
+        switch (errno) {
+            case ENOENT:
+                fprintf(stderr, "No such file or directory\n");
+                break;
+            case EACCES:
+                fprintf(stderr, "Permission denied\n");
+                break;
+            default:
+                perror(NULL);
+                break;
+        }
+        exit(EXIT_FAILURE);
+    }
+
+    int c;
+    data->capacity = INITIAL_CAPACITY;
+    data->consonants = (char *)malloc(data->capacity * sizeof(char));
+    if (data->consonants == NULL) {
+        perror("Memory allocation failed");
+        fclose(infile);
+        exit(EXIT_FAILURE);
+    }
+
+    int index = 0; // Initialize index here, after successful allocation
+    int first_char_read = 0; // Flag to check if any character was read
+    while ((c = fgetc(infile)) != EOF) {
+        first_char_read = 1; // Set flag as soon as a character is read
+        if (is_vowel(c)) {
+            break;
+        }
+        if (isalpha(c)) {
+            if (index >= data->capacity) {
+                data->capacity *= 2;
+                char *temp = (char *)realloc(data->consonants, data->capacity * sizeof(char));
+                if (temp == NULL) {
+                    perror("Memory reallocation failed");
+                    free(data->consonants);
+                    fclose(infile);
+                    exit(EXIT_FAILURE);
+                }
+                data->consonants = temp;
+            }
+            data->consonants[index++] = c;
+        }
+    }
+    data->count = index;
+    fclose(infile);
+
+    if (first_char_read && data->count == 0) {
+        fprintf(stderr, "Warning: No consonants found before the first vowel (or file started with a vowel/was empty) in %s\n", INPUT_FILENAME);
+        // You might choose to exit here instead of just printing a warning, depending on the desired behavior.
+        // exit(EXIT_FAILURE);
+    } else if (!first_char_read) {
+        fprintf(stderr, "Warning: Input file %s is empty.\n", INPUT_FILENAME);
+        // Similarly, you might want to handle an empty file differently.
+        // exit(EXIT_FAILURE);
+    }
+}
+
+// Function to process the extracted data (sort consonants - case-insensitive)
+void processData(ConsonantData *data) {
+    if (data->count > 0) {
+        qsort(data->consonants, data->count, sizeof(char), compare_chars_insensitive);
+    }
+}
+
+// Function to write the processed data to the console and output file with error handling
+void writeData(const ConsonantData *data) {
+    printf("Consonants (alphabetical order):\n");
+
+    FILE *outfile = fopen(OUTPUT_FILENAME, "w");
+    if (outfile == NULL) {
+        fprintf(stderr, "Error opening %s: ", OUTPUT_FILENAME);
+        switch (errno) {
+            case EACCES:
+                fprintf(stderr, "Permission denied\n");
+                break;
+            default:
+                perror(NULL);
+                break;
+        }
+        return;
+    }
+
+    for (int i = 0; i < data->count; i++) {
+        printf("%c", data->consonants[i]);
+        fputc(data->consonants[i], outfile);
+    }
+    printf("\n");
+    fclose(outfile);
+    printf("Consonants written to " OUTPUT_FILENAME "\n");
+}
+
+// Function to free the dynamically allocated memory
+void freeData(ConsonantData *data) {
+    free(data->consonants);
+    data->consonants = NULL;
+    data->count = 0;
+    data->capacity = 0;
+}
